@@ -1,7 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from py2neo import neo4j
+import sys
+
+try:
+	from py2neo import neo4j
+except:
+	print "To run this code, please install py2neo library"
+	sys.exit()
+try:
+	from pattern.en import tag
+except:
+	print "Pattern Library required for classes/LSI.py"
+	print "http://www.clips.ua.ac.be/pages/pattern"
+	sys.exit()
+
 class EHRI(object):
 	def __init__(self):
 		"""Set up class environment"""
@@ -36,6 +49,7 @@ class EHRI(object):
 			self.normal = normal
 
 		query = "START doc = node:entities(\"__ISA__:documentaryUnit\") MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\" RETURN doc.__ID__, description.__ID__, description." + self.field
+
 		#Querying the database
 		graph_db = neo4j.GraphDatabaseService()
 		query = neo4j.CypherQuery(graph_db, query)
