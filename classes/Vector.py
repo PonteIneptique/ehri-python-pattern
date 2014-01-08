@@ -32,7 +32,7 @@ class Vector(object):
 		self.stopwords = []
 		self.dir = os.path.dirname(__file__)
 
-		self.externalData = open(os.path.join(self.dir, "./classes/stopwords.txt")) 
+		self.externalData = open(os.path.join(self.dir, "./stopwords.txt")) 
 		self.stopwords = self.externalData.read()
 		self.externalData.close()
 
