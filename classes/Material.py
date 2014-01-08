@@ -35,6 +35,7 @@ class Material(object):
 	def get(self, descriptions, mode = "link", index = False, field = False, count = False):
 		""" Returns a list of names or connect a list of item to lexicon items
 		
+		Keyword arguments:
 		descriptions	---	EHRI.get() descriptions list
 		mode	---	Either link or search
 		index	---	Overide self.index

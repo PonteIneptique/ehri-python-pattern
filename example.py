@@ -5,10 +5,12 @@ from classes.EHRI import EHRI
 from classes.Authorities import Authorities
 from classes.ClusterLSI import ClusterLSI
 from classes.Material import Material
+from classes.Vector import Vector
 
 #Querying EHRI	
 ehri = EHRI()
-descriptions = ehri.get();
+ehri.get()
+descriptions = ehri.debug()
 
 #Getting semi-Automatic material indexing
 materialDescription = ehri.get(field = "extentAndMedium")
@@ -29,4 +31,8 @@ cluster.array = cluster.clusterToArray(cluster.cluster)
 cluster.csv , cluster.fakes = cluster.csv(cluster.array)
 cluster.save(descriptions, cluster.csv, cluster.fakes)
 
-"""
+#Vector
+lsi = Vector()
+lsi.getVectorKeywordIndex(descriptions)
+lsi.vectorize(descriptions)
+print lsi.search("Holocaust")

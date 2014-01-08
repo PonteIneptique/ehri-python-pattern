@@ -42,5 +42,18 @@ class EHRI(object):
 			#Inserting item in list of formated results
 			item.append(i)
 		
+		self.descriptions = item
 		#Return list of dictionary
 		return item
+
+	def debug(self, limit = 10):
+		i = 0
+		items = []
+		for item in self.descriptions:
+			items.append(item)
+			i += 1
+			if i == limit:
+				break
+
+		return items
+
