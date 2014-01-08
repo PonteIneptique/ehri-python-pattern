@@ -7,10 +7,21 @@ class EHRI(object):
 		"""Set up class environment"""
 		self.field = "scopeAndContent"
 		self.lang = "eng"
-	#Dependency
-	#
-	#	- neo4j
-	def get(self, field = False, lang = False):
+		self.normal = True
+
+	def normalize(self, s):
+		"""Normalize a string
+		
+		Keyword arguments:
+		s	---	string
+		
+		"""
+		if type(s) == unicode: 
+			return s.encode('utf8', 'ignore')
+		else:
+			return str(s)
+
+	def get(self, field = False, lang = False, normal = True):
 		"""Returns an item list with descriptions from neo4j DB
 		
 		Keyword arguments:
@@ -21,6 +32,9 @@ class EHRI(object):
 			self.field = field
 		if lang:
 			self.lang = lang
+		if not normal:
+			self.normal = normal
+
 		query = "START doc = node:entities(\"__ISA__:documentaryUnit\") MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\" RETURN doc.__ID__, description.__ID__, description." + self.field
 		#Querying the database
 		graph_db = neo4j.GraphDatabaseService()
@@ -37,7 +51,11 @@ class EHRI(object):
 			z = 0
 			#Getting each column val
 			for k in record:
-				i[key[z]] = k
+				if self.normal:
+					i[key[z]] = self.normalize(k)
+				else:
+					i[key[z]] = k
+
 				z += 1
 			#Inserting item in list of formated results
 			item.append(i)
