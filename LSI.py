@@ -13,6 +13,7 @@ descriptions = ehri.debug(limit = 30)
 ###DEBUG###
 from pprint import pprint
 lsi = Vector()
+lsi.method = "Pattern-Filter"
 lsi.getVectorKeywordIndex(descriptions)
 lsi.vectorize(descriptions)
 lsi.matrix()
