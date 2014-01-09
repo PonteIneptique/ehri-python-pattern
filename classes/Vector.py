@@ -38,6 +38,9 @@ class Vector(object):
 		self.externalData.close()
 
 		self.stopwords = self.stopwords.split(", ")
+		self.stopwords = self.stopwords + [word.title() for word in self.stopwords]
+
+		self.method = "Simple"
 
 	def pretty_print(self, matrix):
 		""" Make the matrix look pretty """
@@ -72,19 +75,40 @@ class Vector(object):
 		"""
 		if filter:
 			self.filter = filter
-		return [word for word,pos in tag(string) if pos.startswith(self.filter) and len(word) > 1]
 
-	def tokenise(self, string, field = False):
+		try:
+			string = string.replace("’", "'")
+			return [word.encode("utf-8", "ignore") for word,pos in tag(string) if pos.startswith(self.filter) and len(word) > 1]
+		except:
+			print "Error : Can't parse following string :"
+			print string
+			sys.exit()
+
+	def tokenise(self, string, field = False, method = False):
 		"""Returns a list of list of words from a list of list of items
 
 		Keyword arguments:
 		string	---	String to tokenise
 		field	---	Field in which we look for material
+		method	---	Available method are :
+			-	Pattern-Filter
+			-	Pattern
+			-	Simple
 		"""
 		if field:
 			self.field = field
+		if method:
+			self.method = method
 
-		self.content = self.clean(string)
+
+		if self.method == "Pattern-Filter":
+			self.content = self.clean(string)
+		elif self.method == "Pattern":
+			self.content = self.clean(string, "")
+		else:
+			self.content = [word for word in string.split(" ") if word not in ["\n", "'", "\"", "”", "’", "...", ".", "!", "?", ")", "(", "[", "]"]]
+			self.content = [word.replace(" ", "") for word in self.content]
+
 
 		return self.content
 
@@ -134,7 +158,11 @@ class Vector(object):
 		wordList = self.removeStopWords(wordList)
 
 		for word in wordList:
-			self.vector[self.vectorIndex[word]] += 1; #Use simple Term Count Model
+			if word in self.vectorIndex:
+				self.vector[self.vectorIndex[word]] += 1; #Use simple Term Count Model
+			else:
+				print "Error : Following word is not in vector Index"
+				print word
 
 		return self.vector
 
