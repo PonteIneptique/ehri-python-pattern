@@ -39,6 +39,7 @@ class Material(object):
 		descriptions	---	EHRI.get() descriptions list
 		mode	---	Either link or search
 		index	---	Overide self.index
+		field ---	Field to query, default is scopeAndContent
 		count	---	Overide self.count
 		
 		"""
