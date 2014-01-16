@@ -19,10 +19,20 @@ class Authorities(object):
 		self.field = "scopeAndContent"
 		self.debug = False
 		self.ids = {}
-		self.threshold = 1
+		self.threshold = (1, 11)
 		
 		self.outputNodes = "auth-nodes.csv"
 		self.outputEdges = "auth-edges.csv"
+
+	def selfFilter(self):
+		"""Filter items disabled manually
+
+		"""
+
+		filter = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+		self.index["authorities"] = [auth for auth in self.index["authorities"] if auth not in filter]
+
 	
 	def cluster(self):
 		"""Create links between nodes from their authorities
@@ -92,7 +102,7 @@ class Authorities(object):
 		"""Clean authorities if their amount of connected item is below the threshold
 
 		Keyword arguments:
-		threshold	---	overwrite original threshold of 1
+		threshold	---	overwrite original threshold of 1 (TUPLE)
 		"""
 
 		if threshold:
@@ -109,7 +119,7 @@ class Authorities(object):
 			for id in index["items"][item]:
 				authorities[id] += 1
 
-		passingTest = [auth for auth in authorities if authorities[auth] > threshold]
+		passingTest = [auth for auth in authorities if authorities[auth] > self.threshold[0] and authorities[auth] < self.threshold[1]]
 
 		for item in index["items"]:
 			index["items"][item] = [auth for auth in index["items"][item] if auth in passingTest]
