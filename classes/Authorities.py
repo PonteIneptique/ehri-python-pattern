@@ -1,7 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from pattern.en import tag
+import sys
+import hashlib
+try:
+	from pattern.en import tag
+except:
+	print "Pattern Library required for classes/LSI.py"
+	print "http://www.clips.ua.ac.be/pages/pattern"
+	sys.exit()
+
 class Authorities(object):
 	
 	def __init__(self):
@@ -11,10 +19,22 @@ class Authorities(object):
 		self.field = "scopeAndContent"
 		self.debug = False
 		self.ids = {}
+		self.threshold = 1
 		
-		self.outputNodes = "./auth-nodes.csv"
-		self.outputEdges = "./auth-edges.csv"
+		self.outputNodes = "auth-nodes.csv"
+		self.outputEdges = "auth-edges.csv"
 	
+	def cluster(self):
+		"""Create links between nodes from their authorities
+
+		"""
+		self.index["cluster"] = {}
+
+		for item in self.index["items"]:
+			self.index["cluster"][item] = [{"weight" : float(len(set(self.index["items"][item]).intersection( set(self.index["items"][id]))))/float(len(self.index["items"][item])) , "name" : id, "authority" : set(self.index["items"][item]).intersection( set(self.index["items"][id])) } for id in self.index["items"] if id != item and len(set(self.index["items"][item]).intersection( set(self.index["items"][id]))) >= 1]
+
+		return self.index
+
 	def get(self, description, index = False, field = False, debug = False):
 		"""Get automaticly authorities (All proper nouns) from descriptions, links them to said descriptions and return an index of links and authorities
 		
@@ -39,7 +59,11 @@ class Authorities(object):
 			if self.debug:
 				print "Handling Item Id " + description[self.identifier]
 				
-			tokens = tag(description[self.field])
+			try:
+				tokens = tag(description[self.field])
+			except:
+				print "Tokenization failed for " + self.field
+				sys.exit()
 			i = 0
 			entities = []
 			while i < len(tokens):
@@ -50,9 +74,12 @@ class Authorities(object):
 					entity_name = name
 					#if tokens[i+z]:
 					if i + z + 1 < len(tokens):
-						while tokens[i+z][1] == "NNP":
+						while tokens[i+z][1] == "NNP" or (z + i + 1 < len(tokens) and tokens[i+z][0].lower() == "of" and tokens[i+z+1][1] == "NNP") :
 							entity_name += " " + tokens[i+z][0]
 							z += 1
+							#Breaking it if not anymore in  index range
+							if z + i == len(tokens):
+								break
 					self.index["authorities"].append(entity_name)
 					if description["idDoc"] not in self.index["items"]:
 						self.index["items"][description["idDoc"]] = []
@@ -61,6 +88,38 @@ class Authorities(object):
 		
 		return self.index
 	
+	def thresholder(self, threshold = False):
+		"""Clean authorities if their amount of connected item is below the threshold
+
+		Keyword arguments:
+		threshold	---	overwrite original threshold of 1
+		"""
+
+		if threshold:
+			self.threshold = threshold
+
+
+		index = self.index.copy()
+		authorities = {}
+
+		for auth in index["authorities"]:
+			authorities[auth] = 0
+
+		for item in index["items"]:
+			for id in index["items"][item]:
+				authorities[id] += 1
+
+		passingTest = [auth for auth in authorities if authorities[auth] > threshold]
+
+		for item in index["items"]:
+			index["items"][item] = [auth for auth in index["items"][item] if auth in passingTest]
+
+		self.index["items"] = index["items"]
+		self.index["authorities"] = passingTest
+
+		return self.index
+
+
 	def clean(self, descriptions = False):
 		"""Returns a cleaned index of neo4j items and authorities
 		
@@ -85,19 +144,7 @@ class Authorities(object):
 		else:
 			return str(s)
 	
-	def save(self, nodesName = False, edgesName = False):
-		"""Save index of authorities and items and their links in two csv files
-		
-		Keyword arguments:
-		nodesName	---	Filename for Nodes's CSV file
-		edgesName	---	Filename for Edges's CSV file
-		
-		"""
-		if nodesName:
-			self.outputNodes = nodesName
-		if edgesName:
-			self.outputEdges = edgesName
-			
+	def saveNodes(self):	
 		i = 1
 		self.ids = {}
 		
@@ -124,3 +171,48 @@ class Authorities(object):
 			for ref in self.indexed[item]:
 				f.write(self.normalize(item + ";" + str(ref) + "\n"))
 		f.close()
+
+	def saveCluster(self):
+		#Writing nodes
+		f = open(self.outputNodes, "wt")
+		f.write("id;label;weight\n")
+
+		for item in self.index["cluster"]:
+			f.write(self.normalize(item + ";" + item + ";" + str(len(self.index["cluster"][item])) + "\n"))
+
+		f.close()
+
+		f = open(self.outputEdges, "wt")
+		f.write("source;target;weight;type;label;hash\n")
+
+		for item in self.index["cluster"]:
+			for link in self.index["cluster"][item]:
+				try:
+					f.write(self.normalize(item) + ";" + self.normalize(link["name"]) + ";" + str(link["weight"]) + ";Undirected;" + self.normalize(",".join(list(link["authority"]))) + ";" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + "\n")
+				except:
+					print "Not possible for " + link["name"] + " -> " + item
+					f.write(self.normalize(item) + ";" + self.normalize(link["name"]) + ";" + str(link["weight"]) + ";Undirected;" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + ";" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + "\n")
+				
+		f.close()
+
+
+
+	def save(self, nodesName = False, edgesName = False, mode = "authorities"):
+		"""Save index of authorities and items and their links in two csv files
+		
+		Keyword arguments:
+		nodesName	---	Filename for Nodes's CSV file
+		edgesName	---	Filename for Edges's CSV file
+		mode	---	If set to authorities, returns authorities in as nodes. Is set to cluster, returns links between item as they share authorities
+		
+		"""
+		if nodesName:
+			self.outputNodes = nodesName
+		if edgesName:
+			self.outputEdges = edgesName
+
+		if mode == "authorities":
+			self.saveNodes()
+		elif mode == "cluster":
+			self.saveCluster()
+		

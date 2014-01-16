@@ -34,7 +34,7 @@ class EHRI(object):
 		else:
 			return str(s)
 
-	def get(self, field = False, lang = False, normal = True):
+	def get(self, field = False, lang = False, normal = True, limit = False):
 		"""Returns an item list with descriptions from neo4j DB
 		
 		Keyword arguments:
@@ -48,7 +48,10 @@ class EHRI(object):
 		if not normal:
 			self.normal = normal
 
-		query = "START doc = node:entities(\"__ISA__:documentaryUnit\") MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\" RETURN doc.__ID__, description.__ID__, description." + self.field
+		if limit:
+			query = "START doc = node:entities(\"__ISA__:documentaryUnit\") MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\" RETURN doc.__ID__, description.__ID__, description." + self.field + " LIMIT " + str(limit)
+		else:
+			query = "START doc = node:entities(\"__ISA__:documentaryUnit\") MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\" RETURN doc.__ID__, description.__ID__, description." + self.field
 
 		#Querying the database
 		graph_db = neo4j.GraphDatabaseService()

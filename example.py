@@ -10,7 +10,6 @@ from classes.Vector import Vector
 #Querying EHRI	
 ehri = EHRI()
 ehri.get()
-ehri.normalize()
 descriptions = ehri.debug()
 
 #Getting semi-Automatic material indexing

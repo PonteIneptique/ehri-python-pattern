@@ -4,6 +4,7 @@
 import sys
 import os
 from math import *
+import re
 
 try:
 	from pattern.en import tag
@@ -12,6 +13,11 @@ except:
 	print "http://www.clips.ua.ac.be/pages/pattern"
 	sys.exit()
 
+try:
+	from nltk.tokenize import RegexpTokenizer
+except:
+	print "NLTK required for classes/LSI.py"
+	sys.exit()
 
 try:
 	from numpy import dot, array
@@ -88,6 +94,8 @@ class Vector(object):
 		if filter:
 			self.filter = filter
 
+		re.sub('<[^<]+?>', '', string)
+
 		try:
 			string = string.replace("’", "'")
 			if self.lowercase:
@@ -124,9 +132,14 @@ class Vector(object):
 		elif self.method == "Pattern":
 			self.content = self.clean(string, "")
 		else:
-			self.content = [word for word in string.split(" ") if word not in ["\n", "'", "\"", "”", "’", "...", ".", "!", "?", ")", "(", "[", "]"]]
-			self.content = [word.replace(" ", "") for word in self.content]
 
+			tokenizer = RegexpTokenizer('\w+|\$[\d\.]+|\S+')
+			string = tokenizer.tokenize(string.strip())
+
+			if self.lowercase:
+				self.content = [word.lower() for word in string if len(word) > 1]
+			else:
+				self.content = [word for word in string if len(word) > 1]
 
 		return self.content
 
@@ -233,7 +246,9 @@ class Vector(object):
 
 		self.documentVectors = []
 		for description in descriptions:
+			print "Document : Starting vector for " + description[self.identifier]
 			self.documentVectors.append((self.makeVector(description[self.field]), description[self.identifier]))
+			print "Document : Ending vector for " + description[self.identifier]
 
 		return self.documentVectors
 
