@@ -34,12 +34,15 @@ class EHRI(object):
 		else:
 			return str(s)
 
-	def get(self, field = False, lang = False, normal = True, limit = False):
+	def get(self, field = False, lang = False, normal = True, limit = False, fields = False, notOptional = False):
 		"""Returns an item list with descriptions from neo4j DB
 		
 		Keyword arguments:
 		field --- Field to search in and returns
 		lang --- Lang to search with and returns
+		limit	---	Number of fields to return
+		fields ---	List of tuple (field name in neo4j, return name)
+		notOptional	---	Fields which MUST be in the description. Only of interest if fields not false
 		"""
 		if field:
 			self.field = field
@@ -48,10 +51,26 @@ class EHRI(object):
 		if not normal:
 			self.normal = normal
 
-		if limit:
-			query = "START doc = node:entities(\"__ISA__:documentaryUnit\") MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\" RETURN doc.__ID__, description.__ID__, description." + self.field + " LIMIT " + str(limit)
+		if fields:
+			queryFields = ", ".join(["description." + f[0] for f in fields])
+
+			if notOptional:
+				where = "MATCH (description)-[describes]->(doc) WHERE " + " AND ". join(["HAS (description. " + f[0] + ")" for f in fields if f[0] in notOptional]) + " AND description.languageCode = \""+self.lang+"\""
+				ret = ",".join([",".join(["description. " + f[0] for f in fields if f[0] in notOptional]), ",".join(["description. " + f[0] + "?" for f in fields if f[0] not in notOptional])])
+			else:
+				where = "MATCH (description)-[describes]->(doc) WHERE " + " AND ". join(["HAS (description. " + f[0] + ")" for f in fields]) + " AND description.languageCode = \""+self.lang+"\""
+				ret = ",".join(["description. " + f[0] for f in fields])
+			#where = "MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\""
+
+			if limit:
+				query = "START doc = node:entities(\"__ISA__:documentaryUnit\") " + where + " RETURN doc.__ID__, description.__ID__, " + ret + " LIMIT " + str(limit)
+			else:
+				query = "START doc = node:entities(\"__ISA__:documentaryUnit\") " + where + " RETURN doc.__ID__, description.__ID__, " + ret
 		else:
-			query = "START doc = node:entities(\"__ISA__:documentaryUnit\") MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\" RETURN doc.__ID__, description.__ID__, description." + self.field
+			if limit:
+				query = "START doc = node:entities(\"__ISA__:documentaryUnit\") " + where + " RETURN doc.__ID__, description.__ID__, description." + self.field + " LIMIT " + str(limit)
+			else:
+				query = "START doc = node:entities(\"__ISA__:documentaryUnit\") " + where + " RETURN doc.__ID__, description.__ID__, description." + self.field
 
 		#Querying the database
 		graph_db = neo4j.GraphDatabaseService()
@@ -60,6 +79,8 @@ class EHRI(object):
 		#Setting up vars
 		item = []
 		key = ("idDoc", "idDesc", self.field);
+		if fields :
+			key = ["idDoc", "idDesc"] + [f[1] for f in fields]
 		
 		#Using the stream of results
 		for record in query.stream():

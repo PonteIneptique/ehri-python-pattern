@@ -24,7 +24,7 @@ class Authorities(object):
 		self.outputNodes = "auth-nodes.csv"
 		self.outputEdges = "auth-edges.csv"
 
-	def selfFilter(self):
+	def manual(self):
 		"""Filter items disabled manually
 
 		"""
@@ -32,6 +32,9 @@ class Authorities(object):
 		filter = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 		self.index["authorities"] = [auth for auth in self.index["authorities"] if auth not in filter]
+
+		for item in self.index["items"]:
+			self.index["items"][item] = [auth for auth in self.index["items"][item] if auth in self.index["authorities"]]
 
 	
 	def cluster(self):
@@ -45,7 +48,7 @@ class Authorities(object):
 
 		return self.index
 
-	def get(self, description, index = False, field = False, debug = False):
+	def get(self, description, index = False, field = False, debug = False, fields = False):
 		"""Get automaticly authorities (All proper nouns) from descriptions, links them to said descriptions and return an index of links and authorities
 		
 		Keyword arguments:
@@ -53,6 +56,7 @@ class Authorities(object):
 		index	---	Index of items, if already exists
 		field ---	Field to query, default is scopeAndContent
 		debug ---	Debug mode : print details during execution
+		fields	---	If more than one field
 		
 		"""
 		if index:
@@ -64,16 +68,20 @@ class Authorities(object):
 		#If Description is a list of description, then we run a loop on it
 		if isinstance(description, list):
 			for element in description:
-				self.get(element)
+				self.get(element, fields = fields)
 		else:
 			if self.debug:
 				print "Handling Item Id " + description[self.identifier]
-				
+			
 			try:
-				tokens = tag(description[self.field])
+				if fields:
+					tokens = tag(". ".join([description[item] for item in description if item in fields]))
+				else:
+					tokens = tag(description[self.field])
 			except:
 				print "Tokenization failed for " + self.field
 				sys.exit()
+
 			i = 0
 			entities = []
 			while i < len(tokens):
@@ -130,15 +138,15 @@ class Authorities(object):
 		return self.index
 
 
-	def clean(self, descriptions = False):
+	def clean(self, descriptions = False, fields = False):
 		"""Returns a cleaned index of neo4j items and authorities
 		
 		Keyword arguments:
 		descriptions	---	descriptions object from EHRI.get()
-		
+
 		"""
 		if descriptions:
-			self.index = self.get(descriptions)
+			self.index = self.get(descriptions, )
 		self.index["authorities"] = list(set(self.index["authorities"]))
 		return self.index
 	
@@ -165,18 +173,20 @@ class Authorities(object):
 		for item in self.index["items"]:
 			self.indexed[item] = [self.ids[ref] for ref in self.index["items"][item]]
 		
+		authList = sum([self.index["items"][iz] for iz in self.index["items"]], [])
 		
 		#Writing Nodes
 		f = open(self.outputNodes, "wt")
-		f.write("id;label;item\n")
+		f.write("id;label;item;centrality\n")
 		for item in self.index["items"]:
-			f.write(self.normalize(item + ";" + item + ";1\n"))
+			f.write(self.normalize(item + ";" + item + ";1;" + str(len(self.index["items"][item])) + "\n"))
 		for item in self.ids:
-			f.write(self.normalize(str(self.ids[item]) + ";" + item + ";0\n"))
+			f.write(self.normalize(str(self.ids[item]) + ";" + item + ";0;" + str(len([auth for auth in authList if auth == item])) + "\n"))
 		f.close()
 		
 		#Writing Edges
 		f = open(self.outputEdges, "wt")
+		f.write("source;target\n")
 		for item in self.index["items"]:
 			for ref in self.indexed[item]:
 				f.write(self.normalize(item + ";" + str(ref) + "\n"))
@@ -201,7 +211,7 @@ class Authorities(object):
 					f.write(self.normalize(item) + ";" + self.normalize(link["name"]) + ";" + str(link["weight"]) + ";Undirected;" + self.normalize(",".join(list(link["authority"]))) + ";" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + "\n")
 				except:
 					print "Not possible for " + link["name"] + " -> " + item
-					f.write(self.normalize(item) + ";" + self.normalize(link["name"]) + ";" + str(link["weight"]) + ";Undirected;" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + ";" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + "\n")
+					#f.write(self.normalize(item) + ";" + self.normalize(link["name"]) + ";" + str(link["weight"]) + ";Undirected;" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + ";" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + "\n")
 				
 		f.close()
 
