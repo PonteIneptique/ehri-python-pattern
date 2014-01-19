@@ -235,4 +235,48 @@ class Authorities(object):
 			self.saveNodes()
 		elif mode == "cluster":
 			self.saveCluster()
+
+	def importer(self, nodesName = False, edgesName = False, mode = "authorities"):
+
+		"""Import csv and recreate a graph
 		
+		Keyword arguments:
+		nodesName	---	Filename for Nodes's CSV file
+		edgesName	---	Filename for Edges's CSV file
+		mode	---	If set to authorities, returns authorities in as nodes. Is set to cluster, returns links between item as they share authorities
+		"""
+
+
+		if nodesName:
+			self.outputNodes = nodesName
+		if edgesName:
+			self.outputEdges = edgesName
+		
+		if mode == "authorities":
+			ids = {}
+			with open(self.outputNodes, "rt") as nodes:
+				i = 0
+				for line in nodes:
+					if i != 0:
+						data = line.split(";")
+						#Index : id, label, item (0 = neo4j, 1 = authority), centrality
+						if data[2] == int(1):
+							self.index["items"][data[1]] = []
+						else:
+							self.index["authorities"].append(data[1])
+							ids[data[0]] = data[1]
+					i += 1
+
+			self.index["authorities"] = set(self.index["authorities"])
+
+			with open(self.outputEdges, "rt") as edges:
+				i = 0
+				for line in edges:
+					if i != 0:
+						#source;target
+						data = line.split(";")
+						if data[0] not in self.index["items"]:
+							self.index["items"][data[0]] = []
+						self.index["items"][data[0]].append(ids[data[1].replace("\n", "")])
+					i += 1
+		return True
