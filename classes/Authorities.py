@@ -10,6 +10,19 @@ except:
 	print "http://www.clips.ua.ac.be/pages/pattern"
 	sys.exit()
 
+try:
+	from numpy import dot, array
+	from numpy.linalg import norm
+except:
+	print "Error: Requires numpy from http://www.scipy.org/. Have you installed scipy?"
+	sys.exit() 
+
+try:
+	from nltk import cluster
+	from nltk.cluster import euclidean_distance
+except:
+	print "Nltk needed for clusterisation"
+	sys.exit()
 class Authorities(object):
 	
 	def __init__(self):
@@ -259,12 +272,20 @@ class Authorities(object):
 				for line in nodes:
 					if i != 0:
 						data = line.split(";")
-						#Index : id, label, item (0 = neo4j, 1 = authority), centrality
-						if data[2] == int(1):
-							self.index["items"][data[1]] = []
-						else:
-							self.index["authorities"].append(data[1])
-							ids[data[0]] = data[1]
+						try:
+							#Index : id, label, item (0 = neo4j, 1 = authority), centrality
+							if int(data[2]) == 1:
+								self.index["items"][data[1]] = []
+							else:
+								self.index["authorities"].append(data[1])
+								ids[data[0]] = data[1]
+						except:
+							#Index : id, label, item (0 = neo4j, 1 = authority), centrality
+							if int(data[3]) == 1:
+								self.index["items"][data[1]] = []
+							else:
+								self.index["authorities"].append(data[1])
+								ids[data[0]] = data[1]
 					i += 1
 
 			self.index["authorities"] = set(self.index["authorities"])
@@ -280,3 +301,30 @@ class Authorities(object):
 						self.index["items"][data[0]].append(ids[data[1].replace("\n", "")])
 					i += 1
 		return True
+
+	def matrix(self):
+		self.vectors = []
+		ids = {}
+		empty = []
+
+		#Saving the index of authorities
+		i = 0
+		for auth in self.index["authorities"]:
+			ids[auth] = i
+			i += 1
+			empty.append(0)
+
+		#Creating vector
+		for item in self.index["items"]:
+			v = empty
+			
+			for auth in self.index["items"][item]:
+				v[ids[auth]] += 1
+
+			self.vectors.append(array(v))
+
+		return True
+
+	def clustering(self):
+		clusterer = cluster.KMeansClusterer(2, euclidean_distance, repeats=10)
+		print clusterer.cluster(self.vectors, True)
