@@ -327,4 +327,8 @@ class Authorities(object):
 
 	def clustering(self):
 		clusterer = cluster.KMeansClusterer(2, euclidean_distance, repeats=10)
-		print clusterer.cluster(self.vectors, True)
+		self.cluster = clusterer.cluster(self.vectors, True)
+
+	def export(self):
+		for item in self.cluster:
+			print item

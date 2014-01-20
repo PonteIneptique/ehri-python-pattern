@@ -1,15 +1,20 @@
-# Load the wordnet corpus
-from nltk.corpus import wordnet
- 
-# Get a collection of synsets (synonym sets) for a word
-synsets = wordnet.synsets( '' )
- 
-# Print the information
-for synset in synsets:
-  print "-" * 10
-  print "Name:", synset.name
-  print "Lexical Type:", synset.lexname
-  print "Lemmas:", synset.lemma_names
-  print "Definition:", synset.definition
-  for example in synset.examples:
-    print "Example:", example
+# example from figure 14.9, page 517, Manning and Schutze
+
+from nltk import cluster
+import numpy
+
+from nltk.cluster import euclidean_distance
+
+vectors = [numpy.array(f) for f in [[2, 1], [1, 3], [4, 7], [6, 7]]]
+means = [[4, 3], [5, 5]]
+
+clusterer = cluster.KMeansClusterer(2, euclidean_distance)
+clusters = clusterer.cluster(vectors, True, trace=True)
+
+print 'Clustered:', vectors
+print 'As:', clusters
+print 'Means:', clusterer.means()
+print
+
+for doc in clusters:
+	print doc
