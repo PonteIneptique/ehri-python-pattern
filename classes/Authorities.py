@@ -11,7 +11,7 @@ except:
 	sys.exit()
 
 try:
-	from numpy import dot, array
+	from numpy import dot, array, short
 	from numpy.linalg import norm
 except:
 	print "Error: Requires numpy from http://www.scipy.org/. Have you installed scipy?"
@@ -23,6 +23,12 @@ try:
 except:
 	print "Nltk needed for clusterisation"
 	sys.exit()
+
+try: 
+	import igraph
+except:
+	print "Error on importing IGraph"
+
 class Authorities(object):
 	
 	def __init__(self):
@@ -32,7 +38,7 @@ class Authorities(object):
 		self.field = "scopeAndContent"
 		self.debug = False
 		self.ids = {}
-		self.threshold = (1, 11)
+		self.threshold = (1, 1218)
 		
 		self.outputNodes = "auth-nodes.csv"
 		self.outputEdges = "auth-edges.csv"
@@ -42,7 +48,7 @@ class Authorities(object):
 
 		"""
 
-		filter = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+		filter = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December", "World War II"],
 
 		self.index["authorities"] = [auth for auth in self.index["authorities"] if auth not in filter]
 
@@ -171,9 +177,9 @@ class Authorities(object):
 		
 		"""
 		if type(s) == unicode: 
-			return s.encode('utf8', 'ignore')
+			return s.encode('utf8', 'ignore').replace(";", "")
 		else:
-			return str(s)
+			return str(s).replace(";", "")
 	
 	def saveNodes(self):	
 		i = 1
@@ -192,9 +198,9 @@ class Authorities(object):
 		f = open(self.outputNodes, "wt")
 		f.write("id;label;item;centrality\n")
 		for item in self.index["items"]:
-			f.write(self.normalize(item + ";" + item + ";1;" + str(len(self.index["items"][item])) + "\n"))
+			f.write(self.normalize(item) + ";" + self.normalize(item) + ";1;" + self.normalize(str(len(self.index["items"][item]))) + "\n")
 		for item in self.ids:
-			f.write(self.normalize(str(self.ids[item]) + ";" + item + ";0;" + str(len([auth for auth in authList if auth == item])) + "\n"))
+			f.write(str(self.ids[item]) + ";" + self.normalize(item) + ";0;" + self.normalize(str(len([auth for auth in authList if auth == item]))) + "\n")
 		f.close()
 		
 		#Writing Edges
@@ -202,7 +208,7 @@ class Authorities(object):
 		f.write("source;target\n")
 		for item in self.index["items"]:
 			for ref in self.indexed[item]:
-				f.write(self.normalize(item + ";" + str(ref) + "\n"))
+				f.write(self.normalize(item) + ";" + str(ref) + "\n")
 		f.close()
 
 	def saveCluster(self):
@@ -259,7 +265,7 @@ class Authorities(object):
 		mode	---	If set to authorities, returns authorities in as nodes. Is set to cluster, returns links between item as they share authorities
 		"""
 
-
+		print mode
 		if nodesName:
 			self.outputNodes = nodesName
 		if edgesName:
@@ -276,10 +282,12 @@ class Authorities(object):
 							#Index : id, label, item (0 = neo4j, 1 = authority), centrality
 							if int(data[2]) == 1:
 								self.index["items"][data[1]] = []
+
 							else:
 								self.index["authorities"].append(data[1])
 								ids[data[0]] = data[1]
 						except:
+							print data
 							#Index : id, label, item (0 = neo4j, 1 = authority), centrality
 							if int(data[3]) == 1:
 								self.index["items"][data[1]] = []
@@ -300,6 +308,30 @@ class Authorities(object):
 							self.index["items"][data[0]] = []
 						self.index["items"][data[0]].append(ids[data[1].replace("\n", "")])
 					i += 1
+		
+		elif mode == "cluster":
+			print "cluster mode"
+			#Nodes
+			with open(self.outputNodes, "rt") as nodes:
+				i = 0
+				for line in nodes:
+					if i != 0:
+						data = line.split(";")
+						#Index : id, label, centrality
+						self.index["items"][data[1]] = []
+					i += 1
+			#Edges
+			with open(self.outputEdges, "rt") as edges:
+				i = 0
+				for line in edges:
+					if i != 0:
+						#source;target
+						data = line.replace("\n", "").split(";")
+						if data[0] not in self.index["items"]:
+							self.index["items"][data[0]] = []
+						self.index["items"][data[0]].append((data[1], float(1)/float(data[2])))
+					i += 1
+
 		return True
 
 	def matrix(self):
@@ -315,20 +347,103 @@ class Authorities(object):
 			empty.append(0)
 
 		#Creating vector
+		i = 0
 		for item in self.index["items"]:
 			v = empty
+			print len(self.index["items"][item])
 			
 			for auth in self.index["items"][item]:
 				v[ids[auth]] += 1
 
+			print str(i) + " \t : \t " + str(len(v))
+			i += 1
+			"""
+			if i == 5000:##22400:
+				break
+			"""
 			self.vectors.append(array(v))
 
 		return True
 
 	def clustering(self):
-		clusterer = cluster.KMeansClusterer(2, euclidean_distance, repeats=10)
+		clusterer = cluster.KMeansClusterer(40, euclidean_distance, repeats=10)
 		self.cluster = clusterer.cluster(self.vectors, True)
 
 	def export(self):
 		for item in self.cluster:
 			print item
+
+	def iGraph(self, debug = False, mode = "authorities", output = "ehri.graphml", direct = False):#Let's create the graph
+		#We need its number of nodes first
+		graphLength = len(set(self.index["items"]))
+
+		if mode == "authorities":
+			graphLength += len(self.index["authorities"])
+
+		#Just checking
+		if debug == True:
+			print "Graph vertices : " + str(graphLength)
+
+		#Create its instance
+		g = igraph.Graph(graphLength, directed = direct)
+
+		#Now we needs names of stuff, lets call it labels
+		labels = [item for item in self.index["items"]]
+
+		#We do miss labels of authorities, dont we ?
+		if mode == "authorities":
+			labels += self.index["authorities"]
+
+		#Have we got same number than graphLength ?
+		if debug==True:
+			print "Labels length " + str(len(labels))
+
+		#Just to be sure :
+		if len(labels) != graphLength:
+			print "Not the same number of names and labels you fool"
+			print "So you shall not pass"
+			sys.exit()
+		
+		#We create another thing : we save index of items and labels in a dictionary, because that's why
+		index = {}
+		for name in labels:
+			index[name] = len(index)
+		#Isn't it beautiful ?
+
+		#So now, we can add labels to our graph 
+		g.vs["label"] = labels
+
+		#Would be nice to connect it...
+		#Hello EDGES
+		edges = []
+		weight = []
+		for i in self.index["items"]:
+			for a in self.index["items"][i]:
+				edges.append((index[i], index[a[0]]))
+			if mode == "cluster":
+				weight.append(a[1])
+			
+		g.add_edges(edges)
+		if mode == "cluster":
+			g.es["weight"] = weight
+
+		#A little sum-up ?
+		if debug == True:
+			igraph.summary(g)
+		
+		if mode != "cluster":
+			#Let's try to make some community out of it...
+			d = g.community_fastgreedy()
+			cl = d.as_clustering()
+			#Let's save this clusterization into an attribute
+			g.vs["fastgreedy"] = cl.membership
+			#Sping glass not possible
+
+
+		#And do that with other clusterization modules
+		d = g.community_walktrap()
+		cl = d.as_clustering()
+		#Let's save this clusterization into an attribute
+		g.vs["walktrap"] = cl.membership
+
+		g.save(output)
