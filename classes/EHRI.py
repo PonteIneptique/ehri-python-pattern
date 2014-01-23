@@ -55,10 +55,10 @@ class EHRI(object):
 			queryFields = ", ".join(["description." + f[0] for f in fields])
 
 			if notOptional:
-				where = "MATCH (description)-[describes]->(doc) WHERE " + " AND ". join(["HAS (description. " + f[0] + ")" for f in fields if f[0] in notOptional]) + " AND description.languageCode = \""+self.lang+"\""
+				where = "MATCH (description)-[describes]->(doc) WHERE HAS (description.languageCode) AND " + " AND ". join(["HAS (description. " + f[0] + ")" for f in fields if f[0] in notOptional]) + " AND description.languageCode = \""+self.lang+"\""
 				ret = ",".join([",".join(["description. " + f[0] for f in fields if f[0] in notOptional]), ",".join(["description. " + f[0] + "?" for f in fields if f[0] not in notOptional])])
 			else:
-				where = "MATCH (description)-[describes]->(doc) WHERE " + " AND ". join(["HAS (description. " + f[0] + ")" for f in fields]) + " AND description.languageCode = \""+self.lang+"\""
+				where = "MATCH (description)-[describes]->(doc) WHERE HAS (description.languageCode) AND " + " AND ". join(["HAS (description. " + f[0] + ")" for f in fields]) + " AND description.languageCode = \""+self.lang+"\""
 				ret = ",".join(["description. " + f[0] for f in fields])
 			#where = "MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\""
 

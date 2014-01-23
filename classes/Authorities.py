@@ -125,33 +125,38 @@ class Authorities(object):
 		
 		return self.index
 	
-	def thresholder(self, threshold = False):
+	def thresholder(self, threshold = False, compute = False, computeMin= False):
 		"""Clean authorities if their amount of connected item is below the threshold
 
 		Keyword arguments:
 		threshold	---	overwrite original threshold of 1 (TUPLE)
+		compute	---	Compute a high fraction of links
 		"""
 
 		if threshold:
 			self.threshold = threshold
 
+		try:
+			if compute:
+				self.countAuthorities(purge=True)
+				x = [self.authorities[i] for i in self.authorities if self.authorities[i] != 1]
+				xx = sorted(x)
+				l = float(len(xx))
+				if computeMin:
+					self.threshold = (xx[int(l/compute)], xx[int(l/compute*(compute-1))])
+				else:
+					self.threshold = (2, xx[int(l/compute*(compute-1))])
+		except:
+			print "error in compute"
+			sys.exit()
 
-		index = self.index.copy()
-		authorities = {}
 
-		for auth in index["authorities"]:
-			authorities[auth] = 0
 
-		for item in index["items"]:
-			for id in index["items"][item]:
-				authorities[id] += 1
+		passingTest = [auth for auth in self.authorities if self.authorities[auth] >= self.threshold[0] and self.authorities[auth] <= self.threshold[1]]
 
-		passingTest = [auth for auth in authorities if authorities[auth] > self.threshold[0] and authorities[auth] < self.threshold[1]]
+		for item in self.index["items"]:
+			self.index["items"][item] = [auth for auth in self.index["items"][item] if auth in passingTest]
 
-		for item in index["items"]:
-			index["items"][item] = [auth for auth in index["items"][item] if auth in passingTest]
-
-		self.index["items"] = index["items"]
 		self.index["authorities"] = passingTest
 
 		return self.index
@@ -217,7 +222,7 @@ class Authorities(object):
 		f.write("id;label;weight\n")
 
 		for item in self.index["cluster"]:
-			f.write(self.normalize(item + ";" + item + ";" + str(len(self.index["cluster"][item])) + "\n"))
+			f.write(self.normalize(item) + ";" + self.normalize(item) + ";" + str(len(self.index["cluster"][item])) + "\n")
 
 		f.close()
 
@@ -230,7 +235,7 @@ class Authorities(object):
 					f.write(self.normalize(item) + ";" + self.normalize(link["name"]) + ";" + str(link["weight"]) + ";Undirected;" + self.normalize(",".join(list(link["authority"]))) + ";" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + "\n")
 				except:
 					print "Not possible for " + link["name"] + " -> " + item
-					#f.write(self.normalize(item) + ";" + self.normalize(link["name"]) + ";" + str(link["weight"]) + ";Undirected;" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + ";" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + "\n")
+					f.write(self.normalize(item) + ";" + self.normalize(link["name"]) + ";" + str(link["weight"]) + ";Undirected;" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + ";" + self.normalize(hashlib.md5(",".join(list(link["authority"]))).hexdigest()) + "\n")
 				
 		f.close()
 
@@ -447,3 +452,59 @@ class Authorities(object):
 		g.vs["walktrap"] = cl.membership
 
 		g.save(output)
+
+	def countAuthorities(self, purge = False):
+		"""
+			Make a dictionary with the amount of item linked to it
+		"""
+		self.authorities = {}
+		a = {}
+		for item in self.index["items"]:
+			for aa in self.index["items"][item]:
+				if aa not in a:
+					a[aa] = 0
+				a[aa] += 1
+
+		self.authorities = a
+		if purge:
+			self.authorities = {}
+			for i in a:
+				if a[i] != 1:
+					self.authorities[i] = a[i]
+
+
+	def stats(self):
+		"""
+			Print out stats about items
+		"""
+		
+		x = [self.authorities[i] for i in self.authorities if self.authorities[i] != 1]
+		xx = sorted(x)
+		l = float(len(xx))
+		print "-----------"
+		print "Population : " + str(l)
+		print "-----------"
+		print "Q1 = " + str(xx[int(l/4)])
+		print "Q3 = " + str(xx[int(float(l/4)*3)])
+		print "-----------"
+		print "01/08 = " + str(xx[int(l/8)])
+		print "07/08 = " + str(xx[int(float(l/8)*7)])
+		print "-----------"
+		print "01/16 = " + str(xx[int(l/16)])
+		print "15/16 = " + str(xx[int(float(l/16)*15)])
+		print "-----------"
+		print "01/32 = " + str(xx[int(l/32)])
+		print "31/32 = " + str(xx[int(float(l/32)*31)])
+		print "-----------"
+		print "01/64 = " + str(xx[int(l/64)])
+		print "63/64 = " + str(xx[int(float(l/64)*63)])
+		print "-----------"
+		print "01/128 = " + str(xx[int(l/128)])
+		print "127/128 = " + str(xx[int(float(l/128)*127)])
+		print "-----------"
+		print "01/256 = " + str(xx[int(l/256)])
+		print "255/256 = " + str(xx[int(float(l/256)*255)])
+		print "-----------"
+		print "01/512 = " + str(xx[int(l/512)])
+		print "511/512 = " + str(xx[int(float(l/512)*511)])
+		print "-----------"
