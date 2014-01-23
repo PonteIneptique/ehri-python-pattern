@@ -9,7 +9,7 @@ from pprint import pprint
 
 #Querying EHRI	
 ehri = EHRI()
-ehri.get(fields = [("scopeAndContent", "description"), ("name", "title"), ("biographicalHistory", "bio")], notOptional = ["name"])
+ehri.get(fields = [("description.scopeAndContent", "description"), ("description.name", "title"), ("description.biographicalHistory", "bio")], notOptional = ["name"])
 
 print "NEO4J DONE"
 #Getting automaticly generated authorities :
