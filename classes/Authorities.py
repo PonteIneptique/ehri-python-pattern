@@ -424,9 +424,11 @@ class Authorities(object):
 		weight = []
 		for i in self.index["items"]:
 			for a in self.index["items"][i]:
-				edges.append((index[i], index[a[0]]))
-			if mode == "cluster":
-				weight.append(a[1])
+				if mode == "cluster":
+					edges.append((index[i], index[a[0]]))
+					weight.append(a[1])
+				else:
+					edges.append((index[i], index[a]))
 			
 		g.add_edges(edges)
 		if mode == "cluster":
@@ -436,13 +438,16 @@ class Authorities(object):
 		if debug == True:
 			igraph.summary(g)
 		
-		if mode != "cluster":
-			#Let's try to make some community out of it...
-			d = g.community_fastgreedy()
-			cl = d.as_clustering()
-			#Let's save this clusterization into an attribute
-			g.vs["fastgreedy"] = cl.membership
-			#Sping glass not possible
+		try:
+			if mode != "cluster":
+				#Let's try to make some community out of it...
+				d = g.community_fastgreedy()
+				cl = d.as_clustering()
+				#Let's save this clusterization into an attribute
+				g.vs["fastgreedy"] = cl.membership
+				#Sping glass not possible
+		except:
+			print "Fast greedy not working. Multi edges graph ?"
 
 
 		#And do that with other clusterization modules

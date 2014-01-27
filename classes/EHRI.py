@@ -34,7 +34,7 @@ class EHRI(object):
 		else:
 			return str(s)
 
-	def get(self, field = False, lang = False, normal = True, limit = False, fields = False, notOptional = False, has = "", match = " MATCH (description)-[describes]->(doc) "):
+	def get(self, field = False, lang = False, normal = True, limit = False, fields = False, notOptional = False, has = "", match = " MATCH (description)-[:describes]->(doc) "):
 		"""Returns an item list with descriptions from neo4j DB
 		
 		Keyword arguments:
@@ -56,12 +56,12 @@ class EHRI(object):
 
 			if notOptional:
 				where = " WHERE HAS (description.languageCode) AND " + " AND ". join(["HAS (" + f[0] + ")" for f in fields if f[0] in notOptional]) + " AND description.languageCode = \""+self.lang+"\""
-				ret = ",".join([",".join([f[0] for f in fields if f[0] in notOptional]), ",".join([f[0] + "?" for f in fields if f[0] not in notOptional])])
+				ret = " , ".join([" , ".join([f[0] for f in fields if f[0] in notOptional]), " , ".join([f[0] + "?" for f in fields if f[0] not in notOptional])])
 			else:
 				where = " WHERE HAS (description.languageCode) AND " + " AND ". join(["HAS (" + f[0] + ")" for f in fields]) + " AND description.languageCode = \""+self.lang+"\""
-				ret = ",".join([f[0] for f in fields])
+				ret = " , ".join([f[0] for f in fields])
 			#where = "MATCH (description)-[describes]->(doc) WHERE HAS (description." + self.field + ") AND description.languageCode = \""+self.lang+"\""
-
+			print ret
 			if limit:
 				query = "START doc = node:entities(\"__ISA__:documentaryUnit\") " + match + where + has + " RETURN doc.__ID__, description.__ID__, " + ret + " LIMIT " + str(limit)
 			else:
@@ -71,8 +71,6 @@ class EHRI(object):
 				query = "START doc = node:entities(\"__ISA__:documentaryUnit\") " + where + " RETURN doc.__ID__, description.__ID__, description." + self.field + " LIMIT " + str(limit)
 			else:
 				query = "START doc = node:entities(\"__ISA__:documentaryUnit\") " + where + " RETURN doc.__ID__, description.__ID__, description." + self.field
-		
-		print query
 
 		#Querying the database
 		graph_db = neo4j.GraphDatabaseService()

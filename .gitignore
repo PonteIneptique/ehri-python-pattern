@@ -4,3 +4,5 @@
 *.gml*
 *.graphml*
 .gitignore~
+./csv/*
+./graphml/*

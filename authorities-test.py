@@ -9,7 +9,7 @@ from pprint import pprint
 
 #Querying EHRI	
 ehri = EHRI()
-ehri.get(fields = [("description.scopeAndContent", "description"), ("description.name", "title"), ("description.biographicalHistory", "bio")], notOptional = ["name"])
+ehri.get(fields = [("description.scopeAndContent", "description"), ("description.name", "title"), ("description.biographicalHistory", "bio")], notOptional = ["description.name"])
 
 print "NEO4J DONE"
 #Getting automaticly generated authorities :
@@ -25,7 +25,7 @@ indexer.save(nodesName = "t-auth-nodes-all.csv", edgesName = "t-auth-edges-all.c
 print "SAVING Normal DONE"
 
 #With Thresholding
-indexer.thresholder()
+indexer.thresholder(compute=128)
 indexer.save(nodesName = "t-auth-nodes-threshold.csv", edgesName = "t-auth-edges-threshold.csv")
 print "SAVING thresholder DONE"
 

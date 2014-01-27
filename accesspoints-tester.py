@@ -37,10 +37,16 @@ auth.stats()
 
 auth.thresholder(compute=128)
 
+auth.save(nodesName = "ehri-accesspoints-nodes-threshold.csv", edgesName = "ehri-accesspoints-edges-threshold.csv")
+
 auth.stats()
+
+auth.iGraph(debug = True, output="ehri-accesspoints-threshold.graphml")
+
+sys.exit()
 
 auth.cluster()
 
-auth.save(nodesName = "ehri-accesspoints-nodes-cluster.csv", edgesName = "ehri-accesspoints-cluster.csv", mode="cluster")
+auth.save(nodesName = "ehri-accesspoints-nodes-cluster.csv", edgesName = "ehri-accesspoints-edges-cluster.csv", mode="cluster")
 
 auth.iGraph(mode = "cluster", debug = True, output="ehri-accesspoints.graphml")
